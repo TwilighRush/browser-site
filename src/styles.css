@@ -1,3 +1,6 @@
+@import 'normalize.css';
+
+/* 其他自定义样式 */
 @tailwind base;
 @tailwind components;
-@tailwind utilities; 
+@tailwind utilities;
