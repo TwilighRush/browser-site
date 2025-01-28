@@ -25,6 +25,13 @@ module.exports = {
         loader: 'ts-loader',
         options: { appendTsSuffixTo: [/\.vue$/] },
       },
+      {
+        test: /\.(png|svg|jpg|jpeg|gif)$/i,
+        type: 'asset/resource',
+        generator: {
+          filename: 'images/[name][ext]',
+        },
+      },
     ],
   },
   plugins: [
@@ -34,7 +41,10 @@ module.exports = {
       filename: 'index.html',
     }),
     new CopyWebpackPlugin({
-      patterns: [{ from: 'manifest.json', to: '' }],
+      patterns: [
+        { from: 'manifest.json', to: '' },
+        { from: 'images', to: '' },
+      ],
     }),
   ],
   resolve: {
