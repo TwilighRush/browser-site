@@ -5,14 +5,14 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 
 module.exports = merge(common, {
   mode: 'production',
-  module: {
-    rules: [
-      {
-        test: /\.css$/,
-        use: [MiniCssExtractPlugin.loader, 'css-loader', 'postcss-loader'],
-      },
-    ],
-  },
+  // module: {
+  //   rules: [
+  //     {
+  //       test: /\.css$/,
+  //       use: [MiniCssExtractPlugin.loader, 'css-loader', 'postcss-loader'],
+  //     },
+  //   ],
+  // },
   optimization: {
     minimize: true,
     minimizer: [new TerserWebpackPlugin()],
