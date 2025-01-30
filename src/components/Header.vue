@@ -2,7 +2,7 @@
   <header class="fixed top-0 left-0 right-0 h-[60px] bg-transparent z-50">
     <div class="h-full px-5">
       <div class="relative pt-2.5">
-        <div class="cursor-pointer" @click="handleAvatarClick">
+        <div class="cursor-pointer w-10" @click="handleAvatarClick">
           <div class="avatar">T</div>
         </div>
       </div>

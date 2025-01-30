@@ -2,6 +2,8 @@
   <div id="app">
     <Header />
     <BackgroundImage />
+    <BookmarkSidebar />
+    <router-view></router-view>
   </div>
 </template>
 
@@ -9,12 +11,14 @@
 import { defineComponent } from 'vue'
 import BackgroundImage from './components/BackgroundImage.vue'
 import Header from './components/Header.vue'
+import BookmarkSidebar from './components/BookmarkSidebar.vue'
 
 export default defineComponent({
   name: 'App',
   components: {
     BackgroundImage,
     Header,
+    BookmarkSidebar,
   },
 })
 </script>
