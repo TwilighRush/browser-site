@@ -24,6 +24,7 @@
             v-for="bookmark in filteredBookmarks"
             :key="bookmark.id"
             :item="bookmark"
+            @bookmark-updated="loadBookmarks"
           />
         </div>
       </div>
@@ -32,12 +33,18 @@
 </template>
 
 <script>
+import { computed } from 'vue'
 import BookmarkTreeItem from './BookmarkTreeItem.vue'
 
 export default {
   name: 'BookmarkSidebar',
   components: {
     BookmarkTreeItem
+  },
+  provide() {
+    return {
+      sidebarVisible: computed(() => this.isVisible) // 使用 computed 包装以保持响应性
+    }
   },
   data() {
     return {
@@ -63,11 +70,12 @@ export default {
       this.isVisible = false
     },
     loadBookmarks() {
-      // 使用 Chrome Bookmarks API 获取书签树
       if (chrome.bookmarks) {
-        console.log('======',chrome.bookmarks)
         chrome.bookmarks.getTree((bookmarkTreeNodes) => {
-          // bookmarkTreeNodes[0] 是根节点
+          if (chrome.runtime.lastError) {
+            console.error('加载书签失败:', chrome.runtime.lastError)
+            return
+          }
           this.bookmarks = this.processBookmarkTree(bookmarkTreeNodes[0].children)
         })
       }
@@ -123,12 +131,14 @@ export default {
   position: fixed;
   top: 0;
   left: 0;
-  width: 300px;
+  width: 320px;
   height: 100vh;
   background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
   z-index: 1000;
-  padding: 20px;
+  padding: 24px;
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .slide-enter-active,
@@ -142,23 +152,56 @@ export default {
 }
 
 .sidebar-header {
-  padding-bottom: 16px;
-  border-bottom: 1px solid #eee;
-  margin-bottom: 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  margin-bottom: 20px;
 }
 
-.bookmark-tree {
-  height: calc(100% - 60px);
-  overflow-y: auto;
-  padding: 8px;
+.sidebar-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
 }
 
 .search-input {
   width: 100%;
-  padding: 8px;
-  margin-top: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  padding: 10px 12px;
+  margin-top: 12px;
+  border: 1px solid #e4e4e4;
+  border-radius: 8px;
   font-size: 14px;
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+.bookmark-tree {
+  height: calc(100% - 90px);
+  overflow-y: auto;
+  padding: 4px;
+}
+
+/* 自定义滚动条样式 */
+.bookmark-tree::-webkit-scrollbar {
+  width: 6px;
+}
+
+.bookmark-tree::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.bookmark-tree::-webkit-scrollbar-thumb {
+  background: #ddd;
+  border-radius: 3px;
+}
+
+.bookmark-tree::-webkit-scrollbar-thumb:hover {
+  background: #bbb;
 }
 </style>
