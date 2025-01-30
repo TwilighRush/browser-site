@@ -1,5 +1,5 @@
 import { App, createVNode, render } from 'vue'
-import Toast from '../components/Toast.vue'
+import Toast from '../components/common/Toast.vue'
 
 export interface ToastInstance {
   show: (message: string, type?: 'success' | 'error' | 'info') => void
