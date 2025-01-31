@@ -1,7 +1,10 @@
 <template>
   <div class="background-image" :style="{ backgroundImage: `url(${backgroundImage})` }">
     <div class="time-container">
-      <div class="time text-6xl font-bold text-white">{{ currentTime }}</div>
+      <div class="time text-6xl font-bold text-white mb-8 text-center">{{ currentTime }}</div>
+    </div>
+    <div class="search-box-container">
+      <SearchBox />
     </div>
   </div>
 </template>
@@ -9,10 +12,13 @@
 <script lang="ts">
 import { defineComponent, ref, onMounted, onUnmounted } from 'vue'
 import request from '../utils/request';
-import { unsplashAccessKey } from '../constant';
+import SearchBox from './SearchBox.vue'
 
 export default defineComponent({
   name: 'BackgroundImage',
+  components: {
+    SearchBox
+  },
   setup() {
     const backgroundImage = ref('')
     const currentTime = ref('')
@@ -74,5 +80,12 @@ export default defineComponent({
 
 .time {
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.search-box-container {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 </style> 

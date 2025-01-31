@@ -19,7 +19,7 @@
             <input 
               type="text" 
               v-model="loginForm.username" 
-              placeholder="用户名"
+              placeholder="邮箱"
               class="w-full pl-11 pr-4 py-3.5 rounded-xl border-2 border-gray-100 bg-gray-50/50 
               hover:border-gray-200 hover:bg-gray-50/70
               focus:outline-none focus:border-green-500/20 focus:bg-white 
@@ -76,13 +76,13 @@
       class="fixed inset-0 bg-black/40 flex items-center justify-center z-[1000] backdrop-blur-sm">
       <div class="w-[380px] bg-white/95 backdrop-blur rounded-2xl p-8 text-center shadow-2xl transform transition-all duration-300 scale-100">
         <h2 class="text-2xl text-gray-800 font-semibold mb-2">创建账号</h2>
-        <p class="text-gray-500 text-sm mb-8">加入我们的社区</p>
+        <!-- <p class="text-gray-500 text-sm mb-8">加入我们的社区</p> -->
         <div class="space-y-4">
           <div class="relative">
             <input 
               type="text" 
               v-model="registerForm.username" 
-              placeholder="用户名"
+              placeholder="邮箱"
               class="w-full pl-11 pr-4 py-3.5 rounded-xl border-2 border-gray-100 bg-gray-50/50 focus:outline-none focus:border-green-500/20 focus:bg-white focus:ring-[3px] focus:ring-green-500/10 focus:shadow-[0_0_0_1px_rgba(34,197,94,0.1)] transition-all placeholder-gray-400 placeholder-opacity-70 focus:placeholder-opacity-50"
             >
             <div class="absolute inset-y-0 left-3.5 flex items-center text-gray-400">
@@ -174,6 +174,10 @@
 
 <script>
 import request from '../utils/request';
+import { useToast } from '../utils/toast';
+import { encryptPassword } from '../utils/crypto';
+
+const toast = useToast()
 
 export default {
   name: 'Header',
@@ -195,7 +199,24 @@ export default {
       }
     }
   },
+  created() {
+    // 组件创建时检查登录状态
+    this.checkLoginStatus()
+  },
   methods: {
+    checkLoginStatus() {
+      const token = localStorage.getItem('token')
+      const user = localStorage.getItem('user')
+      
+      if (token && user) {
+        this.isLoggedIn = true
+        const userInfo = JSON.parse(user)
+        // 如果有头像信息则更新
+        if (userInfo.avatar) {
+          this.userAvatar = userInfo.avatar
+        }
+      }
+    },
     handleAvatarClick() {
       if (this.isLoggedIn) {
         this.showSettingsModal = true
@@ -213,47 +234,114 @@ export default {
       this.showLoginModal = true
       this.registerForm = { username: '', password: '', confirmPassword: '' }
     },
+    validateEmail(email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      return emailRegex.test(email)
+    },
+    validatePassword(password) {
+      // 密码长度至少8位
+      if (password.length < 8) {
+        return { valid: false, message: '密码长度至少8位' }
+      }
+      
+      // 密码必须包含数字和字母
+      const hasNumber = /\d/.test(password)
+      const hasLetter = /[a-zA-Z]/.test(password)
+      
+      if (!hasNumber || !hasLetter) {
+        return { valid: false, message: '密码必须包含数字和字母' }
+      }
+      
+      return { valid: true }
+    },
     async handleLogin() {
+      if (!this.validateEmail(this.loginForm.username)) {
+        toast.show('请输入有效的邮箱地址', 'error')
+        return
+      }
+
+      if (!this.loginForm.password) {
+        toast.show('请输入密码', 'error')
+        return
+      }
+
       try {
-        // 这里添加登录逻辑
-        // const response = await login(this.loginForm)
         const res = await request('/auth/login', {
           method: 'POST',
-          body: JSON.stringify(this.loginForm),
+          body: JSON.stringify({
+            username: this.loginForm.username,
+            password: encryptPassword(this.loginForm.password)
+          }),
         })
-        if(!res.faild){}
-        // this.isLoggedIn = true
-        // this.showLoginModal = false
-        // 可以更新用户头像
-        // this.userAvatar = response.data.avatar
+        
+        if (res.failed) {
+          toast.show(res.message, 'error')
+          return
+        }
+
+        // 保存token和用户信息
+        localStorage.setItem('token', res.token)
+        localStorage.setItem('user', JSON.stringify(res.user))
+        
+        this.isLoggedIn = true
+        this.showLoginModal = false
+        toast.show('登录成功', 'success')
       } catch (error) {
-        console.error('登录失败:', error)
+        toast.show('登录失败: ' + error.message, 'error')
       }
     },
     async handleLogout() {
       try {
-        // 这里添加登出逻辑
-        // await logout()
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
         this.isLoggedIn = false
         this.showSettingsModal = false
         this.userAvatar = 'https://via.placeholder.com/40'
+        toast.show('已退出登录', 'success')
       } catch (error) {
-        console.error('登出失败:', error)
+        toast.show('退出失败: ' + error.message, 'error')
       }
     },
     async handleRegister() {
-      if (this.registerForm.password !== this.registerForm.confirmPassword) {
-        alert('两次输入的密码不一致')
+      if (!this.validateEmail(this.registerForm.username)) {
+        toast.show('请输入有效的邮箱地址', 'error')
         return
       }
+
+      const passwordCheck = this.validatePassword(this.registerForm.password)
+      if (!passwordCheck.valid) {
+        toast.show(passwordCheck.message, 'error')
+        return
+      }
+      
+      if (this.registerForm.password !== this.registerForm.confirmPassword) {
+        toast.show('两次输入的密码不一致', 'error')
+        return
+      }
+
       try {
-        // 这里添加注册逻辑
-        // const response = await register(this.registerForm)
+        const res = await request('/auth/register', {
+          method: 'POST',
+          body: JSON.stringify({
+            username: this.registerForm.username,
+            password: encryptPassword(this.registerForm.password)
+          }),
+        })
+
+        if (res.failed) {
+          toast.show(res.message, 'error')
+          return
+        }
+
+        // 保存token和用户信息
+        localStorage.setItem('token', res.token)
+        localStorage.setItem('user', JSON.stringify(res.user))
+
         this.isLoggedIn = true
         this.showRegisterModal = false
-        // this.userAvatar = response.data.avatar
+        toast.show('注册成功', 'success')
       } catch (error) {
-        console.error('注册失败:', error)
+        toast.show('注册失败: ' + error.message, 'error')
       }
     }
   }
