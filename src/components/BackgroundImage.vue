@@ -1,8 +1,13 @@
 <template>
   <div class="background-image" :style="{ backgroundImage: `url(${backgroundImage})` }">
     <div class="time-container">
-      <div class="time text-6xl font-bold text-white mb-8 text-center">{{ currentTime }}</div>
+      <div class="time text-9xl font-bold text-white mb-8 text-center">{{ currentTime }}</div>
     </div>
+    
+    <div class="quick-links-wrapper">
+      <QuickLinks />
+    </div>
+    
     <div class="search-box-container">
       <SearchBox />
     </div>
@@ -13,11 +18,13 @@
 import { defineComponent, ref, onMounted, onUnmounted } from 'vue'
 import request from '../utils/request';
 import SearchBox from './SearchBox.vue'
+import QuickLinks from './QuickLinks.vue'
 
 export default defineComponent({
   name: 'BackgroundImage',
   components: {
-    SearchBox
+    SearchBox,
+    QuickLinks
   },
   setup() {
     const backgroundImage = ref('')
@@ -29,7 +36,7 @@ export default defineComponent({
       currentTime.value = now.toLocaleTimeString('zh-CN', {
         hour: '2-digit',
         minute: '2-digit',
-        second: '2-digit'
+        // second: '2-digit'
       })
     }
 
@@ -87,5 +94,14 @@ export default defineComponent({
   bottom: 40px;
   left: 50%;
   transform: translateX(-50%);
+}
+
+.quick-links-wrapper {
+  position: fixed;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  max-width: 700px;
 }
 </style> 

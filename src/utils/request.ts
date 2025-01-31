@@ -34,11 +34,77 @@ const DEFAULT_OPTIONS: RequestOptions = {
   } as Record<string, string>,
 }
 
+// 添加刷新 token 相关的类型和变量
+interface TokenInfo {
+  token: string
+  refreshToken: string
+}
+
+let isRefreshing = false
+let refreshSubscribers: ((token: string) => void)[] = []
+
+// 添加订阅刷新 token 的函数
+function subscribeTokenRefresh(cb: (token: string) => void) {
+  refreshSubscribers.push(cb)
+}
+
+// 执行所有订阅者的回调
+function onRefreshed(token: string) {
+  refreshSubscribers.map((cb) => cb(token))
+  refreshSubscribers = []
+}
+
+// 修改刷新 token 的函数
+async function refreshToken(): Promise<string> {
+  try {
+    const refreshToken = localStorage.getItem('refreshToken')
+    if (!refreshToken) {
+      throw new Error('No refresh token')
+    }
+
+    const response = await fetch(`${DEFAULT_OPTIONS.baseURL}/auth/refresh`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ refreshToken }),
+    })
+
+    const data = await response.json()
+    if (!response.ok) {
+      throw new Error(data.message || '刷新token失败')
+    }
+
+    // 只保存 access token
+    localStorage.setItem('token', data.token)
+
+    return data.token
+  } catch (error) {
+    // token 刷新失败，清除用户信息
+    localStorage.removeItem('token')
+    throw error
+  }
+}
+
 async function request<T = any>(
   url: string,
   options: RequestOptions = {},
 ): Promise<CustomResponse<T>> {
   const mergedOptions = { ...DEFAULT_OPTIONS, ...options }
+
+  // 添加请求拦截器处理
+  if (requestInterceptor) {
+    const token = localStorage.getItem('token')
+    if (token) {
+      mergedOptions.headers = {
+        ...mergedOptions.headers,
+        Authorization: `Bearer ${token}`,
+      }
+    }
+    const interceptedOptions = requestInterceptor(mergedOptions)
+    Object.assign(mergedOptions, interceptedOptions)
+  }
+
   const { baseURL, timeout, params, ...fetchOptions } = mergedOptions
   const toast = useToast()
 
@@ -66,6 +132,39 @@ async function request<T = any>(
 
     // 获取响应数据
     const data = await response.json()
+
+    // 处理 token 过期
+    if (response.status === 401) {
+      if (!isRefreshing) {
+        isRefreshing = true
+        try {
+          const newToken = await refreshToken()
+          isRefreshing = false
+          onRefreshed(newToken)
+
+          // 使用新 token 重试当前请求
+          mergedOptions.headers = {
+            ...mergedOptions.headers,
+            Authorization: `Bearer ${newToken}`,
+          }
+          return request<T>(url, mergedOptions)
+        } catch (error) {
+          isRefreshing = false
+          throw error
+        }
+      } else {
+        // 等待其他请求刷新 token
+        return new Promise((resolve) => {
+          subscribeTokenRefresh((token: string) => {
+            mergedOptions.headers = {
+              ...mergedOptions.headers,
+              Authorization: `Bearer ${token}`,
+            }
+            resolve(request<T>(url, mergedOptions))
+          })
+        })
+      }
+    }
 
     // 处理 HTTP 错误
     if (!response.ok) {
@@ -136,18 +235,16 @@ export const setResponseInterceptor = (
   responseInterceptor = interceptor
 }
 
-// 处理认证相关
-export const setToken = (token: string) => {
-  DEFAULT_OPTIONS.headers = {
-    ...DEFAULT_OPTIONS.headers,
-    Authorization: `Bearer ${token}`,
+// 修改默认的请求拦截器实现
+setRequestInterceptor((options: RequestOptions) => {
+  const token = localStorage.getItem('token')
+  if (token) {
+    options.headers = {
+      ...options.headers,
+      Authorization: `Bearer ${token}`,
+    }
   }
-}
-
-export const clearToken = () => {
-  const headers = DEFAULT_OPTIONS.headers as Record<string, string>
-  const { Authorization: _, ...rest } = headers
-  DEFAULT_OPTIONS.headers = rest
-}
+  return options
+})
 
 export default request

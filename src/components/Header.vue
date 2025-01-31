@@ -292,10 +292,13 @@ export default {
     },
     async handleLogout() {
       try {
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
-        this.isLoggedIn = false
-        this.showSettingsModal = false
+        await request("/auth/logout", {
+          method: "POST",
+        });
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        this.isLoggedIn = false;
+        this.showSettingsModal = false;
         this.userAvatar = 'https://via.placeholder.com/40'
         toast.show('已退出登录', 'success')
       } catch (error) {
