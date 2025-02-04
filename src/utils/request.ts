@@ -10,9 +10,12 @@ interface RequestOptions extends RequestInit {
 }
 
 interface CustomResponse<T = any> {
-  code: number
-  data: T
-  message: string
+  code?: number
+  data?: T
+  message?: string
+  token?: string
+  user?: any
+  failed?: boolean
 }
 
 class RequestError extends Error {
@@ -57,31 +60,33 @@ function onRefreshed(token: string) {
 // 修改刷新 token 的函数
 async function refreshToken(): Promise<string> {
   try {
-    const refreshToken = localStorage.getItem('refreshToken')
-    if (!refreshToken) {
-      throw new Error('No refresh token')
-    }
+    // const refreshToken = localStorage.getItem('refreshToken')
+    // if (!refreshToken) {
+    //   throw new Error('No refresh token')
+    // }
 
-    const response = await fetch(`${DEFAULT_OPTIONS.baseURL}/auth/refresh`, {
+    const response = await request(`${DEFAULT_OPTIONS.baseURL}/auth/refresh`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ refreshToken }),
     })
+    // if (response.failed) {
+    //   throw new Error(data.message || '刷新token失败')
+    // }
 
-    const data = await response.json()
-    if (!response.ok) {
-      throw new Error(data.message || '刷新token失败')
+    if (!response.token) {
+      throw new Error('No token received')
     }
+    localStorage.setItem('token', response.token)
+    localStorage.setItem('user', JSON.stringify(response.user))
 
-    // 只保存 access token
-    localStorage.setItem('token', data.token)
-
-    return data.token
+    return response.token
   } catch (error) {
     // token 刷新失败，清除用户信息
     localStorage.removeItem('token')
+    localStorage.removeItem('user')
     throw error
   }
 }
@@ -134,7 +139,7 @@ async function request<T = any>(
     const data = await response.json()
 
     // 处理 token 过期
-    if (response.status === 401) {
+    if (response.status === 401 && localStorage.getItem('token')) {
       if (!isRefreshing) {
         isRefreshing = true
         try {
@@ -169,14 +174,14 @@ async function request<T = any>(
     // 处理 HTTP 错误
     if (!response.ok) {
       const errorMsg = data.message || '请求失败'
-      toast.show(errorMsg, 'error')
+      // toast.show(errorMsg, 'error')
       throw new RequestError(errorMsg, response.status, data)
     }
 
     // 处理业务错误
     if (data.failed) {
       const errorMsg = data.message || '业务处理失败'
-      toast.show(errorMsg, 'error')
+      // toast.show(errorMsg, 'error')
       throw new RequestError(errorMsg, data.code, data)
     }
 

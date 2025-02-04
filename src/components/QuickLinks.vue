@@ -9,7 +9,7 @@
       >
         <template #item="{ element }">
           <div class="link-item">
-            <a :href="element.url" target="_blank" class="link-content">
+            <a :href="element.url" class="link-content">
               <img 
                 :src="element.icon" 
                 class="site-icon"
@@ -108,22 +108,20 @@ export default defineComponent({
     }
 
     const loadLinks = async () => {
+      // 先从 localStorage 获取数据
+      const localLinks = localStorage.getItem('quickLinks')
+      if (localLinks) {
+        links.value = JSON.parse(localLinks)
+      }
+
       try {
-        // 如果用户已登录，从服务器获取数据
+        // 再从服务器获取最新数据
         const response = await get('/api/quicklinks')
-        console.log('API Response:', response)
         if (response.data) {
           links.value = response.data
-          console.log('Links after update:', links.value)
           localStorage.setItem('quickLinks', JSON.stringify(response.data))
         }
       } catch (error) {
-        // 如果获取失败，尝试从 localStorage 获取
-        const localLinks = localStorage.getItem('quickLinks')
-        if (localLinks) {
-          links.value = JSON.parse(localLinks)
-          console.log('Local storage links:', links.value)
-        }
         console.error('获取快捷链接失败:', error)
       }
     }
@@ -161,7 +159,20 @@ export default defineComponent({
     }
 
     const onDragEnd = () => {
-      saveLinks()
+      // 获取本地存储的原始顺序
+      const localLinks = localStorage.getItem('quickLinks')
+      if (!localLinks) return
+      
+      const oldLinks = JSON.parse(localLinks)
+      // 检查顺序是否发生变化
+      const orderChanged = links.value.some((link, index) => 
+        link.id !== oldLinks[index]?.id
+      )
+      
+      // 只有顺序改变时才保存
+      if (orderChanged) {
+        saveLinks()
+      }
     }
 
     onMounted(() => {
